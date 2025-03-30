@@ -19,7 +19,7 @@ audio.save("audio.wav");
 
 <template>
 
-  <div class="card">
+  <div class="">
     <p>
       Kokoro example
     </p>
