@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref, watch, nextTick } from 'vue'
+import { onMounted, ref, watch, nextTick, onUnmounted } from 'vue'
 import { kokoroWorker } from "../workers/index";
-import { type KokoroWorker } from "../workers/kokoro/worker"
+import { type KokoroWorker, type AudioCombiner } from "../workers/kokoro/worker"
 
 interface AudioSentencePair {
   audioSrc: string;
@@ -9,7 +9,9 @@ interface AudioSentencePair {
 }
 
 let kokorowrkr: KokoroWorker;
+let audioCombiner: AudioCombiner;
 const audioSrcs = ref<AudioSentencePair[]>([]);
+const combinedAudio = ref();
 const modelLoaded = ref(false);
 const modelGenerating = ref(false);
 const currentIndex = ref(0);
@@ -50,10 +52,25 @@ function splitIntoSentences(text: string): string[] {
   return cleanedSentences;
 }
 
-async function generateText() {
+function freeObjectURLs() {
+  for (const audioSrc of audioSrcs.value) {
+    URL.revokeObjectURL(audioSrc.audioSrc);
+  }
+  if (combinedAudio.value) {
+    URL.revokeObjectURL(combinedAudio.value);
+  }
+}
+
+function reset() {
+  freeObjectURLs();
+  combinedAudio.value = null;
   modelGenerating.value = true;
   audioSrcs.value = [];
   currentIndex.value = 0;
+}
+
+async function generateText() {
+  reset();
 
   if (!kokorowrkr) {
     kokorowrkr = await new kokoroWorker.KokoroWorker();
@@ -68,6 +85,9 @@ async function generateText() {
   }
 
   modelGenerating.value = false;
+  // combine audio via WAV Urls
+  combinedAudio.value = await audioCombiner.combineAudios(audioSrcs.value.map(audioSrc => audioSrc.audioSrc));
+
 }
 
 function getAudioPlayer(index: number): HTMLAudioElement {
@@ -96,6 +116,11 @@ onMounted(async () => {
   kokorowrkr = await new kokoroWorker.KokoroWorker();
   await kokorowrkr.init();
   modelLoaded.value = true;
+  audioCombiner = await new kokoroWorker.AudioCombiner();
+});
+
+onUnmounted(() => {
+  freeObjectURLs();
 });
 
 watch(() => audioSrcs.value.length, async (newLength, oldLength) => {
@@ -126,6 +151,11 @@ watch(() => audioSrcs.value.length, async (newLength, oldLength) => {
 
   <div class="w-3/4 max-h-1/3">
     <textarea v-model="inputText" class="bg-white border rounded border-b-amber-800 w-full p-1 max-h-full"></textarea>
+  </div>
+
+  <div v-if="combinedAudio">
+    Combined Audio
+    <audio :src="combinedAudio" controls></audio>
   </div>
 
   <div class="my-5 max-h-50vh overflow-y-auto max-w-3/4 ">
