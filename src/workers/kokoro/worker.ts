@@ -1,5 +1,6 @@
 import { KokoroTTS } from "./kokoro.js";
 import { expose } from "comlink";
+import { type RawAudio } from "@huggingface/transformers";
 
 export class KokoroWorker {
     tts: KokoroTTS | null;
@@ -18,21 +19,22 @@ export class KokoroWorker {
     }
 
     private detectWebGPU() {
-        try {
-            const adapter = navigator.gpu.requestAdapter();
-            return !!adapter;
-        } catch {
-            return false;
-        }
+        return false;
+        // try {
+        //     const adapter = navigator.gpu.requestAdapter();
+        //     return !!adapter;
+        // } catch {
+        //     return false;
+        // }
     }
 
     async textToSpeech(text: string, voice: string, speed: number) {
         if (!this.tts) {
             await this.init();
         }
-        const audio = await this.tts?.generate(text, { voice, speed });
-
-        return audio;
+        const audio: RawAudio = await this.tts?.generate(text, { voice, speed });
+        const audioUrl = URL.createObjectURL(audio.toBlob());
+        return audioUrl;
     }
 }
 
