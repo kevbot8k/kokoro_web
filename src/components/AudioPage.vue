@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch, nextTick } from 'vue'
 import { kokoroWorker } from "../workers/index";
 import { type KokoroWorker } from "../workers/kokoro/worker"
 
+interface AudioSentencePair {
+  audioSrc: string;
+  sentence: string;
+}
+
 let kokorowrkr: KokoroWorker;
-const audioSrcs = ref<string[]>([]);
+const audioSrcs = ref<AudioSentencePair[]>([]);
 const modelLoaded = ref(false);
 const modelGenerating = ref(false);
 const currentIndex = ref(0);
-const inputText = ref(``)
-const textareaRef = ref(null);
-
+const inputText = ref(``);
 /**
  * Breaks a string of text into an array of individual sentences.
  *
@@ -58,18 +61,34 @@ async function generateText() {
 
   for (const sentence of splitIntoSentences(inputText.value)) {
     const audioUrl = await kokorowrkr.textToSpeech(sentence, `af_heart`, 1.0)
-    audioSrcs.value.push(audioUrl)
+    audioSrcs.value.push({
+      audioSrc: audioUrl,
+      sentence: sentence
+    })
   }
 
   modelGenerating.value = false;
 }
 
+function getAudioPlayer(index: number): HTMLAudioElement {
+  return document.getElementById(`audioPlayer-${index}`) as HTMLAudioElement;
+}
+
+
 function playNext(index: number) {
+  // if audioPlayer-currentIndex is still playing, stop it
+  const previousAudioPlayer = getAudioPlayer(currentIndex.value);
+  if (previousAudioPlayer) {
+    previousAudioPlayer.pause();
+    previousAudioPlayer.currentTime = 0;
+  }
+
   currentIndex.value = index;
   // if there is an audio element, select it by audioPlayer-index id and play it
-  const audioPlayer = document.getElementById(`audioPlayer-${index}`);
+  const audioPlayer = getAudioPlayer(index);
   if (audioPlayer) {
     audioPlayer.play();
+    audioPlayer.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 }
 
@@ -77,6 +96,19 @@ onMounted(async () => {
   kokorowrkr = await new kokoroWorker.KokoroWorker();
   await kokorowrkr.init();
   modelLoaded.value = true;
+});
+
+watch(() => audioSrcs.value.length, async (newLength, oldLength) => {
+  // Only proceed if an item was added.
+  if (newLength > oldLength) {
+    // Wait for Vue to update the DOM.
+    await nextTick();
+    
+    // playNext item
+    if (currentIndex.value + 1 == audioSrcs.value.length) {
+      playNext(currentIndex.value);
+    }
+  }
 });
 
 </script>
@@ -92,13 +124,18 @@ onMounted(async () => {
     Instructions:
   </div>
 
-  <div class="w-3/4">
-    <textarea v-model="inputText" class="bg-slate-100 border rounded border-b-amber-800 w-full p-1"></textarea>
+  <div class="w-3/4 max-h-1/3">
+    <textarea v-model="inputText" class="bg-white border rounded border-b-amber-800 w-full p-1 max-h-full"></textarea>
   </div>
 
-  <div class="my-5">
-    <audio v-for="(audioSrc, index) in audioSrcs" :key="index" :id="`audioPlayer-${index}`" :src="audioSrc" 
-      :autoplay="index == currentIndex" @ended="playNext(index + 1)" controls></audio>
+  <div class="my-5 max-h-50vh overflow-y-auto max-w-3/4 ">
+    <div class="justify-center flex flex-col items-center">
+      <div v-for="(audioSrc, index) in audioSrcs" :key="index" class="w-3/4 min-w-sm flex flex-col items-center bg-slate-50 hover:bg-blue-50 cursor-pointer rounded border my-2" :class="{ 'bg-orange-100!': currentIndex == index}" @click="playNext(index)">
+        <p class="w-full px-2 py-1">{{ audioSrc.sentence }}</p>
+        <audio :id="`audioPlayer-${index}`" :src="audioSrc.audioSrc" 
+        @ended="playNext(index + 1)" controls></audio>
+      </div>
+    </div>
   </div>
   <button @click="generateText" :disabled="!modelLoaded" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500 disabled:cursor-not-allowed">
     {{ modelLoaded ? (!modelGenerating ? `Generate text`: `...Generating` ): `...Loading Model` }}</button>
