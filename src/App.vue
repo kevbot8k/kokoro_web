@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import HelloWorld from './components/AudioPage.vue'
+import AudioPage from './components/AudioPage.vue'
 </script>
 
 <template>
   <div class="w-screen h-screen bg-slate-200 flex flex-col items-center">
-    <HelloWorld  />
+    <AudioPage  />
   </div>
 </template>

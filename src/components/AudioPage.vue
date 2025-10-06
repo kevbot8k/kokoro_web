@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, nextTick, onUnmounted } from 'vue'
 import { kokoroWorker } from "../workers/index";
-import { type KokoroWorker, type AudioCombiner } from "../workers/kokoro/worker"
+import { type KokoroWorker } from "../workers/kokoro/kokoroWorker";
+import { combineAudios } from '../utils/audio';
 
 interface AudioSentencePair {
   audioSrc: string;
@@ -9,7 +10,6 @@ interface AudioSentencePair {
 }
 
 let kokorowrkr: KokoroWorker;
-let audioCombiner: AudioCombiner;
 const audioSrcs = ref<AudioSentencePair[]>([]);
 const combinedAudio = ref();
 const modelLoaded = ref(false);
@@ -86,7 +86,9 @@ async function generateText() {
 
   modelGenerating.value = false;
   // combine audio via WAV Urls
-  combinedAudio.value = await audioCombiner.combineAudios(audioSrcs.value.map(audioSrc => audioSrc.audioSrc));
+  // combinedAudio.value = await audioCombiner.combineAudios(audioSrcs.value.map(audioSrc => audioSrc.audioSrc));
+  combinedAudio.value = await combineAudios(audioSrcs.value.map(audioSrc => audioSrc.audioSrc));
+  console.log(combinedAudio.value.length)
 
 }
 
@@ -116,7 +118,7 @@ onMounted(async () => {
   kokorowrkr = await new kokoroWorker.KokoroWorker();
   await kokorowrkr.init();
   modelLoaded.value = true;
-  audioCombiner = await new kokoroWorker.AudioCombiner();
+  // audioCombiner = await new kokoroWorker.AudioCombiner();
 });
 
 onUnmounted(() => {
