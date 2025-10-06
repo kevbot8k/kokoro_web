@@ -1,4 +1,3 @@
-import { WaveFile } from "wavefile";
 import { read_audio } from "@huggingface/transformers";
 
 /**
@@ -25,7 +24,7 @@ class WaveEncoder {
         const dataSize = samples.length * bytesPerSample;
         const blockAlign = numChannels * bytesPerSample;
         const byteRate = sampleRate * blockAlign;
-        
+
         // The total buffer size is 44 bytes for the header plus the data size
         const buffer = new ArrayBuffer(44 + dataSize);
         const view = new DataView(buffer);
@@ -95,15 +94,13 @@ export async function combineAudios(audioURLs: string[]): Promise<string> {
         concatenatedSamples.set(chunk, offset);
         offset += chunk.length;
     }
-    // 3. Create a new WaveFile from scratch with the combined samples
-    const combinedWav = new WaveFile();
+    // 3. Encode the combined samples into a WAV format buffer using our custom encoder
+    const wavBuffer: Uint8Array = WaveEncoder.encode({
+        samples: concatenatedSamples,
+        sampleRate: 24000,
+        numChannels: 1,
+    });
 
-    console.error(concatenatedSamples.length)
-    // Create a 64-bit float WAV file.
-    combinedWav.fromScratch(1, 24000, '32f', concatenatedSamples);
-
-    // 4. Convert the new WaveFile to a buffer and create a Blob
-    const wavBuffer: Uint8Array = combinedWav.toBuffer();
     // Assuming 'audioBuffer' is your Uint8Array containing the WAV file data
     const blob = new Blob([wavBuffer], { type: 'audio/wav' });
     const audioUrl = URL.createObjectURL(blob);
