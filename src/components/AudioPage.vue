@@ -161,10 +161,11 @@ watch(() => audioSrcs.value.length, async (newLength, oldLength) => {
       <section class="w-full">
         <h2 class="text-sm md:text-lg lg:text-2xl font-bold text-slate-800">How It Works 🚀</h2>
         <ul class="list-disc list-inside space-y-2 text-slate-600 text-xs md:text-sm lg:text-lg">
-          <li>Type or paste text in the box above.</li>
-          <li>Audio is generated automatically.</li>
-          <li>Play sentences individually or play the full text with the combined player.</li>
-          <li>Click "Generate text" to start over.</li>
+          <li>Note: due to model memory requirements, this will only work on <b>Laptops or Desktops</b> not phones (yet).</li>
+          <li>Type or paste text in the box below.</li>
+          <li>Audio is generated per-sentence automatically.</li>
+          <li>Play sentences individually by clicking on them below or play the full text with the combined player.</li>
+          <li>Click "Generate text" to clear the current audio and restart audio generation.</li>
         </ul>
       </section>
     </div>
