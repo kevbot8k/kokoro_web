@@ -1,5 +1,25 @@
 import { phonemize as espeakng } from "phonemizer";
 
+// Polyfill for Safari: ReadableStream async iterator support
+if (
+    typeof ReadableStream !== "undefined" &&
+    !ReadableStream.prototype[Symbol.asyncIterator]
+) {
+    ReadableStream.prototype[Symbol.asyncIterator] = async function* () {
+        const reader = this.getReader();
+        try {
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                yield value;
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    };
+}
+
+
 /**
  * Helper function to split a string on a regex, but keep the delimiters.
  * This is required, because the JavaScript `.split()` method does not keep the delimiters,
